@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+const { protect } = require('../middleware/auth.middleware');
+const {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile
+} = require('../controllers/user.controller');
 const User = require('../models/user.model');
 
 /**
@@ -30,11 +36,57 @@ const User = require('../models/user.model');
  *           type: string
  *           format: date
  *           description: Date when the user was created
+ *         profile:
+ *           type: object
+ *           properties:
+ *             firstName:
+ *               type: string
+ *             lastName:
+ *               type: string
+ *             bio:
+ *               type: string
+ *             avatar:
+ *               type: string
+ *         preferences:
+ *           type: object
+ *           properties:
+ *             theme:
+ *               type: string
+ *               enum: [light, dark, system]
+ *             emailNotifications:
+ *               type: boolean
+ *             defaultDreamPrivacy:
+ *               type: boolean
+ *             dreamReminders:
+ *               type: object
+ *             preferredDreamCategories:
+ *               type: array
+ *               items:
+ *                 type: string
+ *         stats:
+ *           type: object
+ *           properties:
+ *             totalDreams:
+ *               type: integer
+ *             lastDreamDate:
+ *               type: string
+ *               format: date
+ *             dreamStreak:
+ *               type: integer
  *       example:
  *         _id: 60d6ec9f1f6a4e001fcf1ca1
  *         username: dreamuser1
  *         email: user@example.com
  *         createdAt: 2023-06-25T10:00:00.000Z
+ *         profile:
+ *           firstName: John
+ *           lastName: Doe
+ *           bio: Dream enthusiast
+ *         preferences:
+ *           theme: dark
+ *         stats:
+ *           totalDreams: 12
+ *           dreamStreak: 3
  * 
  *   securitySchemes:
  *     bearerAuth:
@@ -92,62 +144,7 @@ const User = require('../models/user.model');
  *       400:
  *         description: Invalid input or email/username already exists
  */
-router.post('/register', async (req, res) => {
-  console.log('POST /api/users/register - Request received:', { 
-    username: req.body.username, 
-    email: req.body.email 
-  });
-  
-  try {
-    const { username, email, password } = req.body;
-    
-    // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
-    });
-    
-    if (existingUser) {
-      console.log('Registration failed - User already exists:', { 
-        email, 
-        username 
-      });
-      return res.status(400).json({ 
-        message: 'Email or username already exists' 
-      });
-    }
-    
-    // Create new user
-    const user = new User({
-      username,
-      email,
-      password
-    });
-    
-    await user.save();
-    console.log('User successfully registered:', { id: user._id, username, email });
-    
-    // Create JWT token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET || 'default_secret_change_in_production',
-      { expiresIn: '30d' }
-    );
-    
-    // Send response (exclude password)
-    res.status(201).json({
-      token,
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        createdAt: user.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('Registration error:', error.message);
-    res.status(500).json({ message: 'Server error during registration' });
-  }
-});
+router.post('/register', registerUser);
 
 /**
  * @swagger
@@ -185,56 +182,7 @@ router.post('/register', async (req, res) => {
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', async (req, res) => {
-  console.log('POST /api/users/login - Login attempt:', { 
-    email: req.body.email 
-  });
-  
-  try {
-    const { email, password } = req.body;
-    
-    // Find user by email
-    const user = await User.findOne({ email }).select('+password');
-    
-    // Check if user exists
-    if (!user) {
-      console.log('Login failed - User not found:', { email });
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-    
-    // Check if password matches
-    const isMatch = await user.matchPassword(password);
-    
-    if (!isMatch) {
-      console.log('Login failed - Incorrect password:', { email });
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-    
-    console.log('User successfully logged in:', { id: user._id, email });
-    
-    // Create JWT token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET || 'default_secret_change_in_production',
-      { expiresIn: '30d' }
-    );
-    
-    // Send response (exclude password)
-    res.status(200).json({
-      token,
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        createdAt: user.createdAt
-      }
-    });
-    
-  } catch (error) {
-    console.error('Login error:', error.message);
-    res.status(500).json({ message: 'Server error during login' });
-  }
-});
+router.post('/login', loginUser);
 
 /**
  * @swagger
@@ -254,40 +202,179 @@ router.post('/login', async (req, res) => {
  *       401:
  *         description: Not authenticated
  */
-router.get('/profile', async (req, res) => {
-  // Normally would include auth middleware
-  // For this example we'll just use a mock authenticated user
-  console.log('GET /api/users/profile - Request received (mock auth)');
-  
+router.get('/profile', protect, getUserProfile);
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   put:
+ *     summary: Update user profile
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 30
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *               profile:
+ *                 type: object
+ *                 properties:
+ *                   firstName:
+ *                     type: string
+ *                   lastName:
+ *                     type: string
+ *                   bio:
+ *                     type: string
+ *                   avatar:
+ *                     type: string
+ *               preferences:
+ *                 type: object
+ *                 properties:
+ *                   theme:
+ *                     type: string
+ *                     enum: [light, dark, system]
+ *                   emailNotifications:
+ *                     type: boolean
+ *                   defaultDreamPrivacy:
+ *                     type: boolean
+ *                   dreamReminders:
+ *                     type: object
+ *                     properties:
+ *                       enabled:
+ *                         type: boolean
+ *                       frequency:
+ *                         type: string
+ *                         enum: [daily, weekly, none]
+ *                       time:
+ *                         type: string
+ *                   preferredDreamCategories:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: User profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Not authenticated
+ *       404:
+ *         description: User not found
+ */
+router.put('/profile', protect, updateUserProfile);
+
+/**
+ * @swagger
+ * /api/users/preferences:
+ *   get:
+ *     summary: Get user preferences
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User preferences retrieved successfully
+ *       401:
+ *         description: Not authenticated
+ */
+router.get('/preferences', protect, (req, res) => {
+  res.status(200).json(req.user.preferences || {});
+});
+
+/**
+ * @swagger
+ * /api/users/preferences:
+ *   put:
+ *     summary: Update user preferences
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               theme:
+ *                 type: string
+ *                 enum: [light, dark, system]
+ *               emailNotifications:
+ *                 type: boolean
+ *               defaultDreamPrivacy:
+ *                 type: boolean
+ *               dreamReminders:
+ *                 type: object
+ *                 properties:
+ *                   enabled:
+ *                     type: boolean
+ *                   frequency:
+ *                     type: string
+ *                     enum: [daily, weekly, none]
+ *                   time:
+ *                     type: string
+ *               preferredDreamCategories:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: User preferences updated successfully
+ *       401:
+ *         description: Not authenticated
+ */
+router.put('/preferences', protect, async (req, res) => {
   try {
-    // In a real app, you'd get the user ID from the authenticated request
-    // For mock purposes:
-    const userId = req.headers['x-mock-user-id'];
-    
-    if (!userId) {
-      console.log('Profile request failed - No mock user ID provided');
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-    
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user._id);
     
     if (!user) {
-      console.log('Profile request failed - User not found:', { userId });
       return res.status(404).json({ message: 'User not found' });
     }
     
-    console.log('User profile retrieved successfully:', { id: user._id, username: user.username });
+    // Update preferences if provided
+    if (req.body.theme) user.preferences.theme = req.body.theme;
+    if (req.body.emailNotifications !== undefined) {
+      user.preferences.emailNotifications = req.body.emailNotifications;
+    }
+    if (req.body.defaultDreamPrivacy !== undefined) {
+      user.preferences.defaultDreamPrivacy = req.body.defaultDreamPrivacy;
+    }
+    if (req.body.dreamReminders) {
+      if (req.body.dreamReminders.enabled !== undefined) {
+        user.preferences.dreamReminders.enabled = req.body.dreamReminders.enabled;
+      }
+      if (req.body.dreamReminders.frequency) {
+        user.preferences.dreamReminders.frequency = req.body.dreamReminders.frequency;
+      }
+      if (req.body.dreamReminders.time) {
+        user.preferences.dreamReminders.time = req.body.dreamReminders.time;
+      }
+    }
+    if (req.body.preferredDreamCategories) {
+      user.preferences.preferredDreamCategories = req.body.preferredDreamCategories;
+    }
     
-    res.status(200).json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      createdAt: user.createdAt
-    });
+    await user.save();
     
+    res.status(200).json(user.preferences);
   } catch (error) {
-    console.error('Profile retrieval error:', error.message);
-    res.status(500).json({ message: 'Server error getting profile' });
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ message: 'Server error updating preferences' });
   }
 });
 

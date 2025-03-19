@@ -2,6 +2,20 @@ const express = require('express');
 const router = express.Router();
 const Dream = require('../models/dream.model');
 const { analyzeDream } = require('../utils/dreamAnalyzer');
+const { 
+  createDream, 
+  getDreams, 
+  getDreamById, 
+  updateDream, 
+  deleteDream, 
+  searchDreams, 
+  getDreamStats, 
+  analyzeDreamPatterns, 
+  shareDream, 
+  getSharedDream,
+  generateDreamInsights
+} = require('../controllers/dream.controller');
+const { protect } = require('../middleware/auth.middleware');
 
 /**
  * @swagger
@@ -671,5 +685,154 @@ router.get('/stats', async (req, res) => {
     res.status(500).json({ message: 'Server error generating statistics' });
   }
 });
+
+/**
+ * @swagger
+ * /api/dreams/{id}/insights:
+ *   get:
+ *     summary: Generate personalized insights for a specific dream
+ *     tags: [Dreams]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the dream to analyze
+ *     responses:
+ *       200:
+ *         description: Dream insights generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 dreamId:
+ *                   type: string
+ *                   description: ID of the analyzed dream
+ *                 title:
+ *                   type: string
+ *                   description: Title of the analyzed dream
+ *                 date:
+ *                   type: string
+ *                   format: date
+ *                   description: Date of the dream
+ *                 emotionalPatterns:
+ *                   type: object
+ *                   properties:
+ *                     currentPrimaryEmotion:
+ *                       type: string
+ *                       description: Primary emotion in the current dream
+ *                     emotionFrequencyInHistory:
+ *                       type: object
+ *                       description: Frequency of emotions in user's dream history
+ *                     isRecurringEmotion:
+ *                       type: boolean
+ *                       description: Whether the primary emotion is recurring
+ *                     emotionalInsight:
+ *                       type: string
+ *                       description: Insight about emotional patterns
+ *                 symbolicConnections:
+ *                   type: object
+ *                   properties:
+ *                     symbolsInCurrentDream:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: Symbols found in the current dream
+ *                     recurringSymbols:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           symbol:
+ *                             type: string
+ *                           frequency:
+ *                             type: number
+ *                           interpretation:
+ *                             type: string
+ *                       description: Symbols that recur in user's dreams
+ *                     symbolInsight:
+ *                       type: string
+ *                       description: Insight about symbolic patterns
+ *                 recurringThemes:
+ *                   type: object
+ *                   properties:
+ *                     recurringThemes:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           theme:
+ *                             type: string
+ *                           frequency:
+ *                             type: number
+ *                       description: Themes that recur in user's dreams
+ *                     themeInsight:
+ *                       type: string
+ *                       description: Insight about thematic patterns
+ *                 psychologicalInsights:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: Psychological interpretations of the dream
+ *                 wakingLifeConnections:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   description: Suggested connections to waking life
+ *                 relatedDreams:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       dreamId:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       date:
+ *                         type: string
+ *                         format: date
+ *                       similarity:
+ *                         type: object
+ *                         properties:
+ *                           overall:
+ *                             type: number
+ *                           emotional:
+ *                             type: number
+ *                           symbolic:
+ *                             type: number
+ *                           thematic:
+ *                             type: number
+ *                           sentiment:
+ *                             type: number
+ *                   description: Dreams with similar content or themes
+ *                 evolvingPatterns:
+ *                   type: object
+ *                   properties:
+ *                     hasEvolvingPatterns:
+ *                       type: boolean
+ *                       description: Whether there are detectable evolving patterns
+ *                     insights:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: Insights about how dream patterns evolve over time
+ *                     emotionTrends:
+ *                       type: object
+ *                       description: Analysis of emotion trends over time
+ *                     sentimentTrends:
+ *                       type: object
+ *                       description: Analysis of sentiment trends over time
+ *       404:
+ *         description: Dream not found
+ *       403:
+ *         description: Not authorized to access this dream
+ *       500:
+ *         description: Server error
+ */
+router.get('/:id/insights', protect, generateDreamInsights);
 
 module.exports = router; 

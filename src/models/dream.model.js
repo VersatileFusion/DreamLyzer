@@ -25,6 +25,12 @@ const dreamSchema = new mongoose.Schema({
     type: [String],
     default: []
   },
+  // New field for categorizing dreams
+  category: {
+    type: String,
+    enum: ['lucid', 'nightmare', 'recurring', 'prophetic', 'healing', 'adventure', 'fantasy', 'uncategorized'],
+    default: 'uncategorized'
+  },
   // Analysis results
   keywords: {
     type: [String],
@@ -50,6 +56,21 @@ const dreamSchema = new mongoose.Schema({
   isPrivate: {
     type: Boolean,
     default: true
+  },
+  // New field for saving sharing information
+  sharing: {
+    isShared: {
+      type: Boolean,
+      default: false
+    },
+    sharedAt: {
+      type: Date,
+      default: null
+    },
+    viewCount: {
+      type: Number,
+      default: 0
+    }
   }
 }, {
   timestamps: true
@@ -57,6 +78,20 @@ const dreamSchema = new mongoose.Schema({
 
 // Create index for searching
 dreamSchema.index({ content: 'text', title: 'text', tags: 'text' });
+
+// Method to generate a shareable link
+dreamSchema.methods.generateShareableLink = function(baseUrl) {
+  return `${baseUrl}/api/dreams/shared/${this._id}`;
+};
+
+// Pre-save hook to set sharing.isShared based on isPrivate
+dreamSchema.pre('save', function(next) {
+  if (this.isModified('isPrivate') && this.isPrivate === false) {
+    this.sharing.isShared = true;
+    this.sharing.sharedAt = new Date();
+  }
+  next();
+});
 
 const Dream = mongoose.model('Dream', dreamSchema);
 
