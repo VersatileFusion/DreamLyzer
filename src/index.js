@@ -27,7 +27,7 @@ const swaggerOptions = {
       description: 'API for dream journal management and analysis',
       contact: {
         name: 'Erfan Ahmadvand',
-        email: '',
+       
         phone: '+989109924707'
       },
       servers: [

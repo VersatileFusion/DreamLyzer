@@ -1,15 +1,21 @@
 {
   "name": "Dreamlyzer",
   "version": "1.0.0",
-  "description": "",
+  "description": "A digital dream journal API with analysis capabilities",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js"
   },
-  "keywords": [],
-  "author": "Erfan Ahmadvand <+989109924707>",
+  "keywords": [
+    "dream",
+    "journal",
+    "analysis",
+    "nlp",
+    "api"
+  ],
+  "author": "Erfan Ahmadvand <erfan.ahmadvand.developer@gmail.com> (tel:+989109924707)",
   "license": "ISC",
   "packageManager": "pnpm@10.6.5",
   "dependencies": {

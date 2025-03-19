@@ -5,7 +5,8 @@ Dreamlyzer is a digital dream journal API that helps users track, analyze, and g
 ## Author
 
 **Erfan Ahmadvand**  
-Contact: +989109924707
+Email: erfan.ahmadvand.developer@gmail.com  
+Phone: +989109924707
 
 ## Features
 
