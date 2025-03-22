@@ -2,10 +2,11 @@
 
 Dreamlyzer is a digital dream journal API that helps users track, analyze, and gain insights from their dreams. The application analyzes dream content to extract keywords, identify emotions, and recognize common dream symbols, providing users with a deeper understanding of their subconscious mind.
 
+[Persian (فارسی) README](./README.fa.md)
+
 ## Author
 
 **Erfan Ahmadvand**  
-Email: erfan.ahmadvand.developer@gmail.com  
 Phone: +989109924707
 
 ## Features
